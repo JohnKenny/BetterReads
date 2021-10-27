@@ -35,10 +35,10 @@ public class BetterreadsDataLoaderApplication {
 	private String worksDumpLocation;
 
 	public static void main(String[] args) {
-		SpringApplication.run(BetterreadsDataLoaderApplication.class, args);
+		SpringApplication.run(BetterreadsDataLoaderApplication.class, args);   
 	}
 
-
+  
 	// initialises author values into cassandra db
 	public void initAuthors() {
 		Path path = Paths.get(authorDumpLocation);
@@ -72,6 +72,21 @@ public class BetterreadsDataLoaderApplication {
 
 	// init works values into cassandra db
 	private void initWorks() {
+		Path path = Paths.get(worksDumpLocation);
+		try(Stream<String> lines = Files.lines(path)){
+			lines.forEach(line -> {
+				String jsonString = line.substring(line.indexOf("{"));
+				try {
+					JSONObject jsonObject = new JSONObject(jsonString);  
+
+				} catch(JSONException e){
+					e.printStackTrace();
+				}
+			});
+
+		} catch(IOException e){
+			e.printStackTrace();
+		}
 
 	}
 
