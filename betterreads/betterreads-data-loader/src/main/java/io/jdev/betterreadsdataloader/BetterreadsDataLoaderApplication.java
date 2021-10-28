@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -29,6 +30,7 @@ import connection.DataStaxAstraProperties;
 import io.jdev.betterreadsdataloader.author.Author;
 import io.jdev.betterreadsdataloader.author.AuthorRepository;
 import io.jdev.betterreadsdataloader.book.Book;
+import io.jdev.betterreadsdataloader.book.BookRepository;
 
 @SpringBootApplication
 @EnableConfigurationProperties(DataStaxAstraProperties.class)
@@ -36,6 +38,9 @@ public class BetterreadsDataLoaderApplication {
 
 	@Autowired
 	AuthorRepository authorRepository;
+
+	@Autowired
+	BookRepository bookRepository;
 
 	@Value("${datadump.location.author}")
 	private String authorDumpLocation;
@@ -79,9 +84,12 @@ public class BetterreadsDataLoaderApplication {
 
 	// init works values into cassandra db
 	private void initWorks() {
+
 		Path path = Paths.get(worksDumpLocation);
+		DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
+
 		try (Stream<String> lines = Files.lines(path)) {
-			lines.forEach(line -> {
+			lines.limit(40).forEach(line -> {
 				String jsonString = line.substring(line.indexOf("{"));
 				try {
 					JSONObject jsonObject = new JSONObject(jsonString);
@@ -97,7 +105,7 @@ public class BetterreadsDataLoaderApplication {
 					JSONObject publishedObj = jsonObject.optJSONObject("created");
 					if (publishedObj != null) {
 						String dateStr = publishedObj.getString("value");
-						book.setPublishedDate(LocalDate.parse(dateStr));
+						book.setPublishedDate(LocalDate.parse(dateStr, dateFormat));
 					}
 
 					JSONArray coversJSONArray = jsonObject.optJSONArray("covers");
@@ -125,6 +133,8 @@ public class BetterreadsDataLoaderApplication {
 									return optionalAuthor.get().getName();
 								}).collect(Collectors.toList());
 						book.setAuthorNames(authorNames);
+						// Persist using Repository
+						bookRepository.save(book);
 					}
 
 				} catch (Exception e) {
@@ -141,7 +151,7 @@ public class BetterreadsDataLoaderApplication {
 	// method runs on application start-up
 	@PostConstruct
 	public void start() {
-		initAuthors();
+		// initAuthors();
 		initWorks();
 	}
 
